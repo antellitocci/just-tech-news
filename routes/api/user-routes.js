@@ -49,6 +49,31 @@ router.post('/', (req, res) => {
     });
 });
 
+//login verification
+// In this case, a login route could've used the GET method since it doesn't actually create or insert anything into the database. But there is a reason why a POST is the standard for the login that's in process.
+
+// A GET method carries the request parameter appended in the URL string, whereas a POST method carries the request parameter in req.body, which makes it a more secure way of transferring data from the client to the server. Remember, the password is still in plaintext, which makes this transmission process a vulnerable link in the chain.
+router.post('/login', (req, res) => {
+    //expects { email: 'lernantino@gmail.com', password: 'password123'}
+    User.findOne({
+        where: {
+            email: req.body.email
+        }
+    }).then(dbUserData => {
+        if(!dbUserData){
+            res.status(400).json({ message: 'No user with that email address!' });
+            return;
+        }
+        //verify user
+        const validPassword = dbUserData.checkPassword(req.body.password);
+        if(!validPassword){
+            res.status(400).json({ message: 'Incorrect password!' });
+            return;
+        }
+        res.json({ user: dbUserData, message: 'You are now logged in! '});
+    });
+});
+
 //PUT /api/users/1
 router.put('/:id', (req,res) => {
     //expects { username: 'Lernantino', email: 'lernantino@gmail.com', password: 'password1234'}
