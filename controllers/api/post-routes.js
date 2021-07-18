@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const sequelize = require('../../config/connection');
+const withAuth = require('../../utils/auth');
 const { Post, User, Vote, Comment } = require('../../models');
 
 //get all posts
@@ -68,12 +69,12 @@ router.get('/:id', (req, res) => {
 });
 
 //create a post
-router.post('/', (req, res) => {
+router.post('/', withAuth, (req, res) => {
     // expects {title: 'Taskmaster goes public!', post_url: 'https://taskmaster.com/press', user_id: 1}
     Post.create({
         title: req.body.title,
         post_url: req.body.post_url,
-        user_id: req.body.user_id
+        user_id: req.session.user_id
     })
     .then(dbPostData => res.json(dbPostData))
     .catch(err => {
@@ -83,7 +84,7 @@ router.post('/', (req, res) => {
 });
 
 //put upvote a post
-router.put('/upvote', (req, res) => {
+router.put('/upvote', withAuth, (req, res) => {
     //make sure session exists first
     if(req.session){
     //custom static method created in models/Post.js
@@ -99,7 +100,7 @@ router.put('/upvote', (req, res) => {
 });
 
 //update a post's title
-router.put('/:id', (req, res) => {
+router.put('/:id', withAuth, (req, res) => {
     Post.update(
         {
             title: req.body.title
@@ -124,18 +125,41 @@ router.put('/:id', (req, res) => {
 });
 
 //delete a post
-router.delete('/:id', (req, res) => {
-    Post.destroy({
+router.delete('/:id', withAuth, (req, res) => {
+    Comment.findAll({
         where: {
-            id: req.params.id
+            post_id: req.params.id
         }
     })
-    .then(dbPostData => {
-        if(!dbPostData){
-            res.status(404).json({ message: 'No post found with this id. '});
-            return;
-        }
-        res.json(dbPostData);
+    .then(dbCommentData => {
+        console.log(dbCommentData);
+        if(!dbCommentData){
+                res.status(404).json({ message: 'No comments found. '});
+                return;
+            }
+            dbCommentData.forEach(element => {
+                Comment.destroy({
+                    where: {
+                        id: element.id
+                    }
+                });
+            });
+
+        res.json(dbCommentData);
+    })
+    .then(dbCommentData => {
+        Post.destroy({
+            where: {
+                id: req.params.id
+            }
+        })    .then(dbPostData => {
+            if(!dbPostData){
+                res.status(404).json({ message: 'No post found with this id. '});
+                return;
+            }
+            res.json(dbPostData);
+    });
+
     })
     .catch(err => {
         console.log(err);
