@@ -4,7 +4,8 @@ const session = require('express-session');
 const routes = require('./controllers');
 const sequelize = require('./config/connection');
 const exphbs = require('express-handlebars');
-const hbs = exphbs.create({});
+const helpers = require('./utils/helpers');
+const hbs = exphbs.create({ helpers });
 require('dotenv').config();
 
 const app = express();
